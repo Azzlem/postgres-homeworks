@@ -1,16 +1,31 @@
 """Скрипт для заполнения данными таблиц в БД Postgres."""
+# импорты
 import psycopg2
-from utils import get_list_from_file
+import csv
 
+# имена файлов
 customers_data = "customers_data.csv"
 employees_data = "employees_data.csv"
 orders_data = "orders_data.csv"
 
+
+# Функция вытаскивающая список из файла
+def get_list_from_file(path):
+    with open(f"north_data/{path}", "r", encoding="utf-8") as f:
+        file_list = csv.reader(f)
+        total = []
+        for el in file_list:
+            total.append(el)
+
+    return total
+
+
+# создание списков
 customers_data_list = get_list_from_file(customers_data)
 employees_data_list = get_list_from_file(employees_data)
 orders_data_list = get_list_from_file(orders_data)
 
-
+# создание коннекта
 conn = psycopg2.connect(
     host="localhost",
     database="north",
@@ -18,46 +33,25 @@ conn = psycopg2.connect(
     password="abc"
 )
 cur = conn.cursor()
-for customer in customers_data_list:
-    if customer[0] != "customer_id":
-        cur.execute("INSERT INTO customers VALUES (%s, %s, %s)", (
-            customer[0],
-            customer[1],
-            customer[2]
-        )
-                    )
 
-for employee in employees_data_list:
-    if employee[0] != "employee_id":
-        cur.execute("INSERT INTO employees VALUES (%s, %s, %s, %s, %s, %s)", (
-            employee[0],
-            employee[1],
-            employee[2],
-            employee[3],
-            employee[4],
-            employee[5]
-        )
-                    )
-for order in orders_data_list:
-    if order[0] != "order_id":
-        cur.execute("INSERT INTO orders VALUES (%s, %s, %s, %s, %s)", (
-            order[0],
-            order[1],
-            order[2],
-            order[3],
-            order[4],
-        )
 
-                    )
+# Функция записи баз
+def fill_table(data_list, name_table):
+    data_list = data_list[1:]
 
-cur.execute("SELECT * FROM orders")
+    for el in data_list:
+        string_config = "%s, " * len(data_list[0])
+        cur.execute(f"INSERT INTO {name_table} VALUES ({string_config[:-2]})", tuple(el))
 
+
+# Вызовы функции записи баз
+fill_table(customers_data_list, "customers")
+fill_table(employees_data_list, "employees")
+fill_table(orders_data_list, "orders")
+
+# Запись в базы
 conn.commit()
 
-rows = cur.fetchall()
-
-for row in rows:
-    print(row)
-
+# Закрытие коннекта
 cur.close()
 conn.close()
